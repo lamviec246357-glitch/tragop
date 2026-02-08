@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tính Lãi Trả Góp</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a73e8">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2489/2489756.png">
+
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; margin-top: 10px; }
+        h2 { text-align: center; color: #1a73e8; margin-bottom: 25px; font-size: 22px; }
+        .input-group { margin-bottom: 20px; position: relative; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; }
+        input, select { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; box-sizing: border-box; font-size: 18px; outline: none; }
+        input:focus { border-color: #1a73e8; }
+        
+        .result { margin-top: 25px; padding: 20px; background: #fffde7; border-left: 5px solid #fbc02d; border-radius: 8px; display: none; }
+        .result p { margin: 10px 0; font-size: 16px; color: #333; display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 5px; }
+        .highlight { font-weight: bold; color: #d32f2f; font-size: 18px; }
+
+        .btn-reset { width: 100%; padding: 15px; margin-top: 15px; border: none; border-radius: 12px; background-color: #ff5252; color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
+        
+        .hold-active { border-color: #ff5252 !important; background-color: #ffebee !important; animation: shake 0.2s infinite; }
+        @keyframes shake { 0% { transform: translateX(0); } 50% { transform: translateX(2px); } 100% { transform: translateX(0); } }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Tính Lãi Trả Góp</h2>
+    
+    <div class="input-group">
+        <label>Số tiền cần góp (VNĐ):</label>
+        <input type="text" id="amount" placeholder="0" autocomplete="off"
+               oninput="handleInput(this)" 
+               onfocus="handleFocus(this)"
+               onmousedown="startHold()" onmouseup="stopHold()" onmouseleave="stopHold()"
+               ontouchstart="startHold()" ontouchend="stopHold()">
+    </div>
+
+    <div class="input-group">
+        <label>Thời hạn góp:</label>
+        <select id="months" onchange="calculate()">
+            <option value="6">6 tháng (Hệ số 1.24)</option>
+            <option value="9">9 tháng (Hệ số 1.29)</option>
+            <option value="12">12 tháng (Hệ số 1.37)</option>
+        </select>
+    </div>
+
+    <div id="resultArea" class="result">
+        <p><span>Tổng tiền cần góp:</span> <span id="totalPay" class="highlight">0</span></p>
+        <p><span>Số tiền lãi:</span> <span id="interest" class="highlight">0</span></p>
+        <p><span>Mỗi tháng góp:</span> <span id="monthlyPay" class="highlight">0</span></p>
+    </div>
+
+    <button class="btn-reset" onclick="resetData()">XÓA DỮ LIỆU</button>
+</div>
+
+<script>
+    // Đăng ký Service Worker rời
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then(reg => console.log('SW Registered!'));
+        });
+    }
+
+    let holdTimer;
+    const amountInput = document.getElementById('amount');
+
+    function handleFocus(input) {
+        input.value = "";
+        calculate();
+    }
+
+    function handleInput(input) {
+        let value = input.value.replace(/\D/g, "");
+        if (value !== "") {
+            input.value = Number(value).toLocaleString('vi-VN');
+        }
+        calculate();
+    }
+
+    function calculate() {
+        const amountStr = amountInput.value.replace(/\./g, "");
+        const amount = parseFloat(amountStr);
+        const months = parseInt(document.getElementById('months').value);
+        const resultArea = document.getElementById('resultArea');
+        
+        if (!amount || amount <= 0) {
+            resultArea.style.display = 'none';
+            return;
+        }
+
+        let factor = (months === 6) ? 1.24 : (months === 9 ? 1.29 : 1.37);
+        const totalPay = amount * factor;
+        const interest = totalPay - amount;
+        const monthlyPay = totalPay / months;
+
+        document.getElementById('totalPay').innerText = Math.round(totalPay).toLocaleString('vi-VN') + " đ";
+        document.getElementById('interest').innerText = Math.round(interest).toLocaleString('vi-VN') + " đ";
+        document.getElementById('monthlyPay').innerText = Math.round(monthlyPay).toLocaleString('vi-VN') + " đ";
+        resultArea.style.display = 'block';
+    }
+
+    function resetData() {
+        amountInput.value = "";
+        document.getElementById('resultArea').style.display = 'none';
+        amountInput.focus();
+    }
+
+    function startHold() {
+        amountInput.classList.add('hold-active');
+        holdTimer = setTimeout(() => {
+            resetData();
+            stopHold();
+        }, 2000); 
+    }
+
+    function stopHold() {
+        clearTimeout(holdTimer);
+        amountInput.classList.remove('hold-active');
+    }
+</script>
+
+</body>
+</html>
